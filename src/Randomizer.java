@@ -2,6 +2,8 @@ import entities.BoxOptions;
 import entities.ExtraBoxOptions;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Randomizer {
@@ -42,6 +44,18 @@ public class Randomizer {
         }
 
         return options;
+    }
+
+    public static List<BoxOptions> generateBoxOptionsList() {
+        List<BoxOptions> optionsList = new ArrayList<>();
+
+        int number = generateRandomInt(10) + 1;
+
+        for (int i = 0; i < number; i++) {
+            optionsList.add(generateBoxOptions());
+        }
+
+        return optionsList;
     }
 
     public static int generateRandomInt(int bound) {

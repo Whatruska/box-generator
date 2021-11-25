@@ -1,34 +1,58 @@
-import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.io.xml.DomDriver;
 import entities.BoxOptions;
 import entities.ExtraBoxOptions;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import javax.json.Json;
+import javax.json.stream.JsonGenerator;
+import java.io.*;
+import java.lang.reflect.Field;
+import java.util.List;
 
 public class Generator {
-    private static final String OUTPUT_DIRECTORY = "output/";
-    private static final XStream X_STREAM = new XStream(new DomDriver());
+    private static final String OUTPUT_FILE_PATH = "output/data.json";
+    private static JsonGenerator jsonGenerator;
 
-    public static void generateXmlFile () {
-        X_STREAM.alias("options", BoxOptions.class);
-        X_STREAM.alias("extra", ExtraBoxOptions.class);
-
-        File file = new File(OUTPUT_DIRECTORY + "data.xml");
+    public static void generateJSON () {
         try {
-            PrintWriter writer = new PrintWriter(file);
-            int number = Randomizer.generateRandomInt(5) + 1;
-            BoxOptions[] arr = new BoxOptions[number];
-            for (int i = 0; i < number; i++) {
-                BoxOptions options = Randomizer.generateBoxOptions();
-                arr[i] = options;
-            }
-            writer.println(X_STREAM.toXML(arr));
-            writer.flush();
-            writer.close();
-        } catch (FileNotFoundException e) {
+            jsonGenerator = Json.createGenerator(new FileWriter(OUTPUT_FILE_PATH));
+            jsonGenerator.writeStartArray();
+            List<BoxOptions> options = Randomizer.generateBoxOptionsList();
+            options.forEach(Generator::generateJSONFromBoxOptions);
+            jsonGenerator.writeEnd();
+            jsonGenerator.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void generateJSONFromBoxOptions (BoxOptions optionsDto) {
+        jsonGenerator.writeStartObject();
+        Field[] fields = BoxOptions.class.getDeclaredFields();
+        for (Field field: fields) {
+            field.setAccessible(true);
+            try {
+                if (field.getName().contains("extras")) {
+                    generateJSONFromExtraOptions((ExtraBoxOptions) field.get(optionsDto));
+                } else {
+                    jsonGenerator.write(field.getName(), field.get(optionsDto).toString());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        jsonGenerator.writeEnd();
+    }
+
+    private static void generateJSONFromExtraOptions (ExtraBoxOptions optionsDto) {
+        jsonGenerator.writeStartObject("extra");
+        Field[] fields = ExtraBoxOptions.class.getDeclaredFields();
+        for (Field field: fields) {
+            field.setAccessible(true);
+            try {
+                jsonGenerator.write(field.getName(), field.get(optionsDto).toString());
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        jsonGenerator.writeEnd();
     }
 }
